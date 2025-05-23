@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
+import 'package:minionette/app/controllers/theme_controller.dart';
 import '../../../services/minio_service.dart';
 
 class SettingsController extends GetxController {
   final MinioService _minioService = Get.find<MinioService>();
+  final ThemeController themeController = Get.find<ThemeController>();
   final _storage = GetStorage();
   
   final RxString endpoint = ''.obs;
@@ -19,13 +21,14 @@ class SettingsController extends GetxController {
   static const String _secretKeyKey = 'minio_secret_key';
   static const String _bucketKey = 'minio_bucket';
   static const String _useSSLKey = 'minio_use_ssl';
+        
+
 
   @override
   void onInit() {
     super.onInit();
     loadSettings();
   }
-
   void loadSettings() {
     endpoint.value = _storage.read(_endpointKey) ?? '';
     accessKey.value = _storage.read(_accessKeyKey) ?? '';

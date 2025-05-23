@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/settings_controller.dart';
+import '../../../controllers/theme_controller.dart';
 
 class SettingsView extends GetView<SettingsController> {
   const SettingsView({super.key});
@@ -11,80 +12,94 @@ class SettingsView extends GetView<SettingsController> {
       appBar: AppBar(
         title: const Text('MinIO Settings'),
       ),
-      body: Obx(() {
-        if (controller.isLoading.value) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      body: GetX<SettingsController>(
+        builder: (controller) {
+          if (controller.isLoading.value) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (controller.errorMessage.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade100,
-                    borderRadius: BorderRadius.circular(8),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (controller.errorMessage.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      controller.errorMessage.value,
+                      style: TextStyle(color: Colors.red.shade900),
+                    ),
                   ),
-                  child: Text(
-                    controller.errorMessage.value,
-                    style: TextStyle(color: Colors.red.shade900),
+                // Theme Toggle
+
+                SwitchListTile(
+                  title: const Text('Dark Mode'),
+                  value: controller.themeController.isDarkMode,
+                  onChanged: (value) =>
+                      controller.themeController.toggleTheme(),
+                ),
+                const Divider(),
+                // MinIO Settings
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Endpoint',
+                    hintText: 'e.g., play.min.io',
+                    border: OutlineInputBorder(),
                   ),
+                  onChanged: (value) => controller.endpoint.value = value,
                 ),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Endpoint',
-                  hintText: 'e.g., play.min.io',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Access Key',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => controller.accessKey.value = value,
                 ),
-                onChanged: (value) => controller.endpoint.value = value,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Access Key',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Secret Key',
+                    border: OutlineInputBorder(),
+                  ),
+                  obscureText: true,
+                  onChanged: (value) => controller.secretKey.value = value,
                 ),
-                onChanged: (value) => controller.accessKey.value = value,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Secret Key',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Bucket Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => controller.bucket.value = value,
                 ),
-                obscureText: true,
-                onChanged: (value) => controller.secretKey.value = value,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Bucket Name',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (value) => controller.bucket.value = value,
-              ),
-              const SizedBox(height: 16),
-              Obx(() => SwitchListTile(
+                const SizedBox(height: 16),
+                GetX<SettingsController>(
+                  builder: (ctrl) => SwitchListTile(
                     title: const Text('Use SSL'),
-                    value: controller.useSSL.value,
-                    onChanged: (value) => controller.toggleSSL(),
-                  )),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: controller.saveSettings,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                    value: ctrl.useSSL.value,
+                    onChanged: (value) => ctrl.toggleSSL(),
+                  ),
                 ),
-                child: const Text('Save Settings'),
-              ),
-            ],
-          ),
-        );
-      }),
+                const SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: controller.saveSettings,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text('Save Settings'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
-} 
+}

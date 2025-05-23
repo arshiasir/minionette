@@ -112,13 +112,13 @@ class BucketManagementView extends GetView<HomeController> {
                     child: ListTile(
                       leading: Icon(
                         Icons.folder,
-                        color: isCurrentBucket ? Theme.of(context).primaryColor : null,
+                        color: isCurrentBucket ? Get.theme.primaryColor : null,
                       ),
                       title: Text(
                         bucket,
                         style: TextStyle(
                           fontWeight: isCurrentBucket ? FontWeight.bold : null,
-                          color: isCurrentBucket ? Theme.of(context).primaryColor : null,
+                          color: isCurrentBucket ? Get.theme.primaryColor : null,
                         ),
                       ),
                       subtitle: isCurrentBucket
