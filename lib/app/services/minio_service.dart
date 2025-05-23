@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:minio/minio.dart';
+import 'package:minio/src/minio.dart';
 import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -11,6 +12,7 @@ class MinioService extends GetxService {
   final RxBool isConnected = false.obs;
   final RxString currentBucket = ''.obs;
   final RxList<String> errorFiles = <String>[].obs;
+  final RxList<String> buckets = <String>[].obs;
 
   Future<MinioService> init() async {
     return this;
@@ -96,17 +98,20 @@ class MinioService extends GetxService {
   }
 
   Future<List<String>> listFiles() async {
-    try {
-      final objects = await _minio.listObjects(currentBucket.value);
-      final List<String> fileNames = [];
-      await for (final result in objects) {
-        // fileNames.add(result.key);
+  try {
+    final objects = await _minio.listObjects(currentBucket.value);
+    final List<String> fileNames = [];
+    await for (final result in objects) {
+      for (final object in result.objects) {
+        fileNames.add(object.key!);
       }
-      return fileNames;
-    } catch (e) {
-      rethrow;
     }
+    return fileNames;
+  } catch (e) {
+    rethrow;
   }
+}
+
 
   Future<void> deleteFile(String fileName) async {
     try {
@@ -119,5 +124,51 @@ class MinioService extends GetxService {
 
   void clearErrorFiles() {
     errorFiles.clear();
+  }
+
+  Future<List<String>> listBuckets() async {
+    try {
+      final bucketList = await _minio.listBuckets();
+      buckets.value = bucketList.map((b) => b.name).toList();
+      return buckets;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> createBucket(String bucketName) async {
+    try {
+      final exists = await _minio.bucketExists(bucketName);
+      if (!exists) {
+        await _minio.makeBucket(bucketName);
+        buckets.add(bucketName);
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> deleteBucket(String bucketName) async {
+    try {
+      if (bucketName == currentBucket.value) {
+        throw Exception('Cannot delete currently selected bucket');
+      }
+      await _minio.removeBucket(bucketName);
+      buckets.remove(bucketName);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> switchBucket(String bucketName) async {
+    try {
+      final exists = await _minio.bucketExists(bucketName);
+      if (!exists) {
+        throw Exception('Bucket does not exist');
+      }
+      currentBucket.value = bucketName;
+    } catch (e) {
+      rethrow;
+    }
   }
 } 
