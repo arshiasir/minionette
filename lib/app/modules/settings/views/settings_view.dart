@@ -14,24 +14,21 @@ class SettingsView extends GetView<SettingsController> {
       appBar: AppBar(
         title: const Text('MinIO Settings'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {},
+          GestureDetector(
+            onTap: () {
+              controller.resetForm();
+              Get.to(() => const AccountFormView());
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Row(
+                spacing: 10,
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [Text("Add Account"), Icon(Icons.add_link_outlined)],
+              ),
+            ),
           ),
         ],
-      ),
-      floatingActionButton: SizedBox(
-        width: 150,
-        child: ElevatedButton(
-          onPressed: () {
-            controller.resetForm();
-            Get.to(() => const AccountFormView());
-          },
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [Text("Add Account"), Icon(Icons.add)],
-          ),
-        ),
       ),
       body: GetX<SettingsController>(
         builder: (controller) {
@@ -41,6 +38,39 @@ class SettingsView extends GetView<SettingsController> {
 
           return Column(
             children: [
+              // Global Error Display
+              GetX<MinioService>(
+                builder: (minioService) {
+                  if (minioService.globalError.isNotEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      margin: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade100,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              minioService.globalError.value,
+                              style: const TextStyle(color: Colors.red),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close, color: Colors.red),
+                            onPressed: () => minioService.clearErrors(),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               // Theme Toggle
               Obx(() => SwitchListTile(
                     title: const Text('Dark Mode'),
@@ -58,14 +88,34 @@ class SettingsView extends GetView<SettingsController> {
                             account == controller.currentAccount.value;
                         return ListTile(
                           title: Text(account.name),
-                          subtitle: Text(account.endpoint),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(account.endpoint),
+                              GetX<MinioService>(
+                                builder: (minioService) {
+                                  final error = minioService.getAccountError(account.name);
+                                  if (error.isNotEmpty) {
+                                    return Text(
+                                      'Error: $error',
+                                      style: const TextStyle(
+                                        color: Colors.red,
+                                        fontSize: 12,
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ],
+                          ),
                           leading: GetX<MinioService>(
                             builder: (minioService) {
                               return Icon(
-                                minioService.isConnected.value
+                                minioService.isAccountConnected(account.name)
                                     ? Icons.cloud_done
                                     : Icons.cloud_off,
-                                color: minioService.isConnected.value
+                                color: minioService.isAccountConnected(account.name)
                                     ? Colors.green
                                     : Colors.red,
                               );
@@ -74,9 +124,18 @@ class SettingsView extends GetView<SettingsController> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (isCurrent)
+                              if (isCurrent) ...[
+                                IconButton(
+                                  icon: const Icon(Icons.refresh),
+                                  onPressed: () async {
+                                    final minioService = Get.find<MinioService>();
+                                    await minioService.testConnection(account.name);
+                                  },
+                                  tooltip: 'Test Connection',
+                                ),
                                 const Icon(Icons.check_circle,
                                     color: Colors.green),
+                              ],
                               IconButton(
                                 icon: const Icon(Icons.delete),
                                 onPressed: () =>

@@ -8,34 +8,152 @@ import 'dart:io';
 
 class MinioService extends GetxService {
   late Minio _minio;
-  final RxBool isConnected = false.obs;
+  final RxMap<String, bool> accountConnections = <String, bool>{}.obs;
+  final RxMap<String, String> accountErrors = <String, String>{}.obs;
   final RxString currentBucket = ''.obs;
   final RxList<String> errorFiles = <String>[].obs;
   final RxList<String> buckets = <String>[].obs;
+  final RxString globalError = ''.obs;
+
+  String _getDetailedErrorMessage(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    
+    // Network related errors
+    if (errorString.contains('socketexception')) {
+      if (errorString.contains('connection refused')) {
+        return 'Server is not running or not accessible. Please check if the MinIO server is running and the endpoint is correct.';
+      } else if (errorString.contains('connection timed out')) {
+        return 'Connection timed out. Please check your network connection and server availability.';
+      } else if (errorString.contains('no address associated with hostname')) {
+        return 'Invalid endpoint address. Please check if the server address is correct.';
+      }
+      return 'Network connection error. Please check your internet connection and server address.';
+    }
+
+    // Authentication errors
+    if (errorString.contains('invalidaccesskeyid')) {
+      return 'Invalid access key. Please check your access key credentials.';
+    }
+    if (errorString.contains('signaturedoesnotmatch')) {
+      return 'Invalid secret key. Please check your secret key credentials.';
+    }
+    if (errorString.contains('accessdenied')) {
+      return 'Access denied. Please check your credentials and permissions.';
+    }
+
+    // SSL/TLS errors
+    if (errorString.contains('ssl') || errorString.contains('tls')) {
+      if (errorString.contains('certificate')) {
+        return 'SSL certificate error. Please check your SSL settings and certificate configuration.';
+      }
+      return 'SSL/TLS connection error. Please check your SSL settings.';
+    }
+
+    // Bucket related errors
+    if (errorString.contains('nosuchbucket')) {
+      return 'Bucket does not exist. Please check the bucket name.';
+    }
+    if (errorString.contains('bucketalreadyexists')) {
+      return 'Bucket already exists. Please use a different bucket name.';
+    }
+
+    // Port related errors
+    if (errorString.contains('port')) {
+      return 'Invalid port number. Please check if the port is correct and accessible.';
+    }
+
+    // Default error message
+    return 'An error occurred: ${error.toString()}';
+  }
 
   Future<MinioService> init() async {
-    return this;
+    try {
+      globalError.value = '';
+      return this;
+    } catch (e) {
+      globalError.value = 'Failed to initialize MinIO service: ${_getDetailedErrorMessage(e)}';
+      rethrow;
+    }
+  }
+
+  Future<bool> testConnection(String accountName) async {
+    try {
+      accountErrors[accountName] = '';
+      globalError.value = '';
+      
+      if (_minio == null) {
+        throw Exception('MinIO client not initialized. Please try reconnecting.');
+      }
+
+      // Try to list buckets as a connection test
+      await _minio.listBuckets();
+      accountConnections[accountName] = true;
+      return true;
+    } catch (e) {
+      accountConnections[accountName] = false;
+      final errorMessage = _getDetailedErrorMessage(e);
+      accountErrors[accountName] = errorMessage;
+      globalError.value = errorMessage;
+      return false;
+    }
   }
 
   Future<void> configureMinio({
     required String endpoint,
     required String accessKey,
     required String secretKey,
+    required String accountName,
     bool useSSL = false,
   }) async {
     try {
-      
+      accountErrors[accountName] = '';
+      globalError.value = '';
+
+      // Validate inputs with specific messages
+      if (endpoint.isEmpty) {
+        throw Exception('Endpoint cannot be empty. Please provide a valid server address.');
+      }
+      if (accessKey.isEmpty) {
+        throw Exception('Access key cannot be empty. Please provide your MinIO access key.');
+      }
+      if (secretKey.isEmpty) {
+        throw Exception('Secret key cannot be empty. Please provide your MinIO secret key.');
+      }
+
+      // Validate endpoint format
+      if (!endpoint.contains('.')) {
+        throw Exception('Invalid endpoint format. Please provide a valid server address (e.g., play.min.io).');
+      }
+
       _minio = Minio(
         endPoint: endpoint,
         accessKey: accessKey,
         secretKey: secretKey,
         useSSL: useSSL,
       );
-      isConnected.value = true;
+
+      // Test the connection immediately after configuration
+      await testConnection(accountName);
     } catch (e) {
-      isConnected.value = false;
+      accountConnections[accountName] = false;
+      final errorMessage = _getDetailedErrorMessage(e);
+      accountErrors[accountName] = errorMessage;
+      globalError.value = errorMessage;
       rethrow;
     }
+  }
+
+  bool isAccountConnected(String accountName) {
+    return accountConnections[accountName] ?? false;
+  }
+
+  String getAccountError(String accountName) {
+    return accountErrors[accountName] ?? '';
+  }
+
+  void clearErrors() {
+    globalError.value = '';
+    accountErrors.clear();
   }
 
   Future<String> uploadFile(PlatformFile file) async {

@@ -26,6 +26,7 @@ class HomeController extends GetxController {
 
   Future<void> _loadMinioSettings() async {
     try {
+      final name = _storage.read('minio_name') ?? 'Default Account';
       final endpoint = _storage.read('minio_endpoint');
       final accessKey = _storage.read('minio_access_key');
       final secretKey = _storage.read('minio_secret_key');
@@ -34,6 +35,7 @@ class HomeController extends GetxController {
 
       if (endpoint != null && accessKey != null && secretKey != null && bucket != null) {
         await _minioService.configureMinio(
+          accountName: name,
           endpoint: endpoint,
           accessKey: accessKey,
           secretKey: secretKey,

@@ -71,6 +71,7 @@ class SettingsController extends GetxController {
   Future<void> _configureMinio(MinioAccount account) async {
     try {
       await _minioService.configureMinio(
+        accountName: account.name,
         endpoint: account.endpoint,
         accessKey: account.accessKey,
         secretKey: account.secretKey,
@@ -105,6 +106,7 @@ class SettingsController extends GetxController {
 
       // Test the configuration
       await _minioService.configureMinio(
+        accountName: newAccount.name,
         endpoint: newAccount.endpoint,
         accessKey: newAccount.accessKey,
         secretKey: newAccount.secretKey,
@@ -113,7 +115,8 @@ class SettingsController extends GetxController {
 
       // Add to accounts list
       accounts.add(newAccount);
-      await _storage.write(_accountsKey, accounts.map((a) => a.toJson()).toList());
+      await _storage.write(
+          _accountsKey, accounts.map((a) => a.toJson()).toList());
 
       // If this is the first account, set it as current
       if (currentAccount.value == null) {
@@ -136,12 +139,14 @@ class SettingsController extends GetxController {
   Future<void> deleteAccount(MinioAccount account) async {
     try {
       accounts.remove(account);
-      await _storage.write(_accountsKey, accounts.map((a) => a.toJson()).toList());
+      await _storage.write(
+          _accountsKey, accounts.map((a) => a.toJson()).toList());
 
       if (currentAccount.value == account) {
         currentAccount.value = accounts.isNotEmpty ? accounts.first : null;
         if (currentAccount.value != null) {
-          await _storage.write(_currentAccountKey, currentAccount.value!.toJson());
+          await _storage.write(
+              _currentAccountKey, currentAccount.value!.toJson());
           await _configureMinio(currentAccount.value!);
         } else {
           await _storage.remove(_currentAccountKey);
