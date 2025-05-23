@@ -21,7 +21,6 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeController = Get.find<ThemeController>();
-    
     return GetMaterialApp(
       title: 'Minionette',
       theme: AppTheme.lightTheme,

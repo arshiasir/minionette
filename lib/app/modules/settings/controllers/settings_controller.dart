@@ -5,7 +5,7 @@ import '../../../services/minio_service.dart';
 import '../../../models/minio_account.dart';
 
 class SettingsController extends GetxController {
-  final MinioService _minioService = Get.find<MinioService>();
+  late MinioService _minioService;
   final ThemeController themeController = Get.find<ThemeController>();
   final _storage = GetStorage();
 
@@ -28,6 +28,11 @@ class SettingsController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    try {
+      _minioService = Get.find<MinioService>();
+    } catch (e) {
+      _minioService = Get.put(MinioService());
+    }
     loadSettings();
   }
 
@@ -53,9 +58,14 @@ class SettingsController extends GetxController {
   }
 
   void setCurrentAccount(MinioAccount account) {
-    currentAccount.value = account;
-    _storage.write(_currentAccountKey, account.toJson());
-    _configureMinio(account);
+    try {
+      currentAccount.value = account;
+      _storage.write(_currentAccountKey, account.toJson());
+      _configureMinio(account);
+      Get.forceAppUpdate();
+    } catch (e) {
+      errorMessage.value = 'Failed to set current account: ${e.toString()}';
+    }
   }
 
   Future<void> _configureMinio(MinioAccount account) async {
@@ -68,6 +78,7 @@ class SettingsController extends GetxController {
       );
     } catch (e) {
       errorMessage.value = 'Failed to configure MinIO: ${e.toString()}';
+      rethrow;
     }
   }
 

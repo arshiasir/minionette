@@ -5,7 +5,6 @@ import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'dart:typed_data';
 
 class MinioService extends GetxService {
   late Minio _minio;
@@ -25,6 +24,7 @@ class MinioService extends GetxService {
     bool useSSL = false,
   }) async {
     try {
+      
       _minio = Minio(
         endPoint: endpoint,
         accessKey: accessKey,
