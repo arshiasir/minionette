@@ -37,7 +37,6 @@ class HomeController extends GetxController {
           endpoint: endpoint,
           accessKey: accessKey,
           secretKey: secretKey,
-          bucket: bucket,
           useSSL: useSSL,
         );
         await loadFiles();

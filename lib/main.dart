@@ -9,7 +9,9 @@ import 'app/controllers/theme_controller.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
-  Get.put(ThemeController());
+  await GetStorage().erase();
+  final themeController = Get.put(ThemeController());
+  themeController.changeTheme(ThemeMode.dark);
   runApp(const MyApp());
 }
 

@@ -22,7 +22,6 @@ class MinioService extends GetxService {
     required String endpoint,
     required String accessKey,
     required String secretKey,
-    required String bucket,
     bool useSSL = false,
   }) async {
     try {
@@ -32,14 +31,6 @@ class MinioService extends GetxService {
         secretKey: secretKey,
         useSSL: useSSL,
       );
-
-      // Check if bucket exists, create if it doesn't
-      final exists = await _minio.bucketExists(bucket);
-      if (!exists) {
-        await _minio.makeBucket(bucket);
-      }
-
-      currentBucket.value = bucket;
       isConnected.value = true;
     } catch (e) {
       isConnected.value = false;
