@@ -5,9 +5,11 @@ import 'package:path/path.dart' as path;
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:convert';
 
 class MinioService extends GetxService {
   late Minio _minio;
+  String? _endpoint;
   final RxMap<String, bool> accountConnections = <String, bool>{}.obs;
   final RxMap<String, String> accountErrors = <String, String>{}.obs;
   final RxString currentBucket = ''.obs;
@@ -108,6 +110,7 @@ class MinioService extends GetxService {
     try {
       accountErrors[accountName] = '';
       globalError.value = '';
+      _endpoint = endpoint;
 
       // Validate inputs with specific messages
       if (endpoint.isEmpty) {
@@ -206,21 +209,33 @@ class MinioService extends GetxService {
     }
   }
 
-  Future<List<String>> listFiles() async {
-  try {
-    final objects = await _minio.listObjects(currentBucket.value);
-    final List<String> fileNames = [];
-    await for (final result in objects) {
-      for (final object in result.objects) {
-        fileNames.add(object.key!);
+  Future<String> getPublicUrl(String fileName) async {
+    try {
+      if (_endpoint == null) {
+        throw Exception('MinIO endpoint not configured');
       }
+      final protocol = _minio.useSSL ? 'https' : 'http';
+      return '$protocol://$_endpoint/${currentBucket.value}/$fileName';
+    } catch (e) {
+      errorFiles.add(fileName);
+      rethrow;
     }
-    return fileNames;
-  } catch (e) {
-    rethrow;
   }
-}
 
+  Future<List<String>> listFiles() async {
+    try {
+      final objects = await _minio.listObjects(currentBucket.value);
+      final List<String> fileNames = [];
+      await for (final result in objects) {
+        for (final object in result.objects) {
+          fileNames.add(object.key!);
+        }
+      }
+      return fileNames;
+    } catch (e) {
+      rethrow;
+    }
+  }
 
   Future<void> deleteFile(String fileName) async {
     try {
@@ -278,6 +293,57 @@ class MinioService extends GetxService {
       currentBucket.value = bucketName;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<void> setBucketPublicAccess(String bucketName) async {
+    try {
+      // Create a policy that allows public read access
+      final policy = {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Principal": "*",
+            "Action": ["s3:GetObject"],
+            "Resource": ["arn:aws:s3:::$bucketName/*"]
+          }
+        ]
+      };
+      
+      // Set the bucket policy
+      await _minio.setBucketPolicy(bucketName, policy);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> disablePublicAccess(String bucketName) async {
+    try {
+      // Remove the bucket policy to disable public access
+      await _minio.setBucketPolicy(bucketName, null);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<bool> isBucketPublic(String bucketName) async {
+    try {
+      final policy = await _minio.getBucketPolicy(bucketName);
+      if (policy == null) return false;
+      
+      // Check if the policy allows public access
+      final statements = policy['Statement'] as List;
+      return statements.any((statement) {
+        final effect = statement['Effect'] as String;
+        final principal = statement['Principal'] as Map;
+        final action = statement['Action'] as List;
+        return effect == 'Allow' && 
+               principal['*'] == '*' && 
+               action.contains('s3:GetObject');
+      });
+    } catch (e) {
+      return false;
     }
   }
 } 

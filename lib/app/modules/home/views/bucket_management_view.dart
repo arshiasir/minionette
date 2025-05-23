@@ -133,6 +133,50 @@ class BucketManagementView extends GetView<HomeController> {
                               onPressed: () => controller.switchBucket(bucket),
                               tooltip: 'Switch to this bucket',
                             ),
+                          Obx(() {
+                            final isPublic = controller.bucketPublicStatus[bucket] ?? false;
+                            return IconButton(
+                              icon: Icon(
+                                Icons.public,
+                                color: isPublic ? Colors.green : null,
+                              ),
+                              onPressed: () {
+                                Get.dialog(
+                                  AlertDialog(
+                                    title: Text(isPublic ? 'Disable Public Access' : 'Enable Public Access'),
+                                    content: Text(
+                                      isPublic
+                                          ? 'This will prevent public access to files in bucket "$bucket". '
+                                              'Are you sure you want to disable public access?'
+                                          : 'This will allow anyone with the URL to access files in bucket "$bucket". '
+                                              'Are you sure you want to enable public access?'
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Get.back(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          if (isPublic) {
+                                            controller.disablePublicAccess(bucket);
+                                          } else {
+                                            controller.enablePublicAccess(bucket);
+                                          }
+                                          Get.back();
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: isPublic ? Colors.red : null,
+                                        ),
+                                        child: Text(isPublic ? 'Disable Public Access' : 'Enable Public Access'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              tooltip: isPublic ? 'Public access enabled - Click to disable' : 'Public access disabled - Click to enable',
+                            );
+                          }),
                           if (!isCurrentBucket)
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),

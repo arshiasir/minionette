@@ -14,6 +14,7 @@ class HomeController extends GetxController {
   final RxString errorMessage = ''.obs;
   final RxList<String> buckets = <String>[].obs;
   final RxString currentBucket = ''.obs;
+  final RxMap<String, bool> bucketPublicStatus = <String, bool>{}.obs;
 
   @override
   void onInit() {
@@ -106,20 +107,42 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> getDownloadUrl(String fileName) async {
+  Future<void> getDownloadUrl(String fileName, {int hours = 1}) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
-      final url = await _minioService.getDownloadUrl(fileName);
+      final url = await _minioService.getDownloadUrl(
+        fileName,
+        expiry: Duration(hours: hours),
+      );
       await Clipboard.setData(ClipboardData(text: url));
       Get.snackbar(
-        'Download URL',
-        'URL copied to clipboard: $url',
+        'Temporary Download URL',
+        'URL copied to clipboard (expires in $hours hours): $url',
         snackPosition: SnackPosition.BOTTOM,
         duration: const Duration(seconds: 10),
       );
     } catch (e) {
       errorMessage.value = 'Failed to get download URL: ${e.toString()}';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> getPublicUrl(String fileName) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      final url = await _minioService.getPublicUrl(fileName);
+      await Clipboard.setData(ClipboardData(text: url));
+      Get.snackbar(
+        'Public Download URL',
+        'URL copied to clipboard: $url',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 10),
+      );
+    } catch (e) {
+      errorMessage.value = 'Failed to get public URL: ${e.toString()}';
     } finally {
       isLoading.value = false;
     }
@@ -149,6 +172,11 @@ class HomeController extends GetxController {
       errorMessage.value = '';
       buckets.value = await _minioService.listBuckets();
       currentBucket.value = _minioService.currentBucket.value;
+      
+      // Check public status for each bucket
+      for (final bucket in buckets) {
+        bucketPublicStatus[bucket] = await _minioService.isBucketPublic(bucket);
+      }
     } catch (e) {
       errorMessage.value = 'Failed to load buckets: ${e.toString()}';
     } finally {
@@ -206,6 +234,42 @@ class HomeController extends GetxController {
       );
     } catch (e) {
       errorMessage.value = 'Failed to switch bucket: ${e.toString()}';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> enablePublicAccess(String bucketName) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await _minioService.setBucketPublicAccess(bucketName);
+      bucketPublicStatus[bucketName] = true;
+      Get.snackbar(
+        'Success',
+        'Public access enabled for bucket: $bucketName',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      errorMessage.value = 'Failed to enable public access: ${e.toString()}';
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> disablePublicAccess(String bucketName) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+      await _minioService.disablePublicAccess(bucketName);
+      bucketPublicStatus[bucketName] = false;
+      Get.snackbar(
+        'Success',
+        'Public access disabled for bucket: $bucketName',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } catch (e) {
+      errorMessage.value = 'Failed to disable public access: ${e.toString()}';
     } finally {
       isLoading.value = false;
     }

@@ -94,10 +94,38 @@ class HomeView extends GetView<HomeController> {
                       onPressed: () => controller.downloadFile(fileName),
                       tooltip: 'Download',
                     ),
-                    IconButton(
+                    PopupMenuButton<String>(
                       icon: const Icon(Icons.link),
-                      onPressed: () => controller.getDownloadUrl(fileName),
-                      tooltip: 'Get Download URL',
+                      tooltip: 'Get URL',
+                      onSelected: (value) {
+                        if (value == 'temporary') {
+                          _showDurationDialog(context, fileName);
+                        } else if (value == 'public') {
+                          controller.getPublicUrl(fileName);
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'temporary',
+                          child: Row(
+                            children: [
+                              Icon(Icons.access_time),
+                              SizedBox(width: 8),
+                              Text('Temporary URL'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'public',
+                          child: Row(
+                            children: [
+                              Icon(Icons.public),
+                              SizedBox(width: 8),
+                              Text('Public URL'),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete),
@@ -114,6 +142,47 @@ class HomeView extends GetView<HomeController> {
       floatingActionButton: FloatingActionButton(
         onPressed: controller.pickAndUploadFile,
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showDurationDialog(BuildContext context, String fileName) {
+    final TextEditingController durationController = TextEditingController(text: '1');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Generate Download URL'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Enter how long the download URL should be valid for:'),
+            const SizedBox(height: 16),
+            TextField(
+              controller: durationController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Duration',
+                border: OutlineInputBorder(),
+                suffixText: 'hours',
+                helperText: 'URL will expire after this duration',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final hours = int.tryParse(durationController.text) ?? 1;
+              Navigator.pop(context);
+              controller.getDownloadUrl(fileName, hours: hours);
+            },
+            child: const Text('Generate URL'),
+          ),
+        ],
       ),
     );
   }
