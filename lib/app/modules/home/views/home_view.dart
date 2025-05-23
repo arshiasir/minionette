@@ -9,7 +9,7 @@ class HomeView extends GetView<HomeController> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AetherCode'),
+        title: const Text('Minionette'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -17,88 +17,97 @@ class HomeView extends GetView<HomeController> {
           ),
         ],
       ),
-      body: GridView.count(
-        padding: const EdgeInsets.all(16),
-        crossAxisCount: 2,
-        mainAxisSpacing: 16,
-        crossAxisSpacing: 16,
-        children: [
-          _buildFeatureCard(
-            context,
-            'AI Code Assistant',
-            Icons.code,
-            Colors.blue,
-            () => Get.toNamed('/code-writer'),
-          ),
-          _buildFeatureCard(
-            context,
-            'File Explorer',
-            Icons.folder,
-            Colors.orange,
-            () => Get.toNamed('/file-explorer'),
-          ),
-          _buildFeatureCard(
-            context,
-            'Cloud Storage',
-            Icons.cloud,
-            Colors.green,
-            () => Get.toNamed('/file-explorer?tab=cloud'),
-          ),
-          _buildFeatureCard(
-            context,
-            'Settings',
-            Icons.settings,
-            Colors.purple,
-            () => Get.toNamed('/settings'),
-          ),
-        ],
-      ),
-    );
-  }
+      body: Obx(() {
+        if (controller.isLoading.value) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-  Widget _buildFeatureCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withOpacity(0.7),
-                color,
+        if (controller.errorMessage.isNotEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  controller.errorMessage.value,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: controller.loadFiles,
+                  child: const Text('Retry'),
+                ),
               ],
             ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 48,
-                color: Colors.white,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
+          );
+        }
+
+        if (controller.files.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  'No files found',
+                  style: TextStyle(fontSize: 18),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: controller.pickAndUploadFile,
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Upload File'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          itemCount: controller.files.length,
+          itemBuilder: (context, index) {
+            final fileName = controller.files[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                leading: const Icon(Icons.insert_drive_file),
+                title: Text(fileName),
+                subtitle: Obx(() {
+                  final hasError = controller.errorMessage.value.contains(fileName);
+                  return hasError
+                      ? const Text(
+                          'Error processing file',
+                          style: TextStyle(color: Colors.red),
+                        )
+                      : const SizedBox.shrink();
+                }),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.download),
+                      onPressed: () => controller.downloadFile(fileName),
+                      tooltip: 'Download',
                     ),
-                textAlign: TextAlign.center,
+                    IconButton(
+                      icon: const Icon(Icons.link),
+                      onPressed: () => controller.getDownloadUrl(fileName),
+                      tooltip: 'Get Download URL',
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed: () => controller.deleteFile(fileName),
+                      tooltip: 'Delete',
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
+            );
+          },
+        );
+      }),
+      floatingActionButton: FloatingActionButton(
+        onPressed: controller.pickAndUploadFile,
+        child: const Icon(Icons.add),
       ),
     );
   }
