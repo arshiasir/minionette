@@ -50,49 +50,17 @@ class BucketManagementView extends GetView<HomeController> {
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: controller.bucketName.value,
                       decoration: const InputDecoration(
                         labelText: 'New Bucket Name',
                         border: OutlineInputBorder(),
                       ),
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          controller.createNewBucket(value);
-                        }
-                      },
                     ),
                   ),
                   const SizedBox(width: 16),
                   ElevatedButton.icon(
                     onPressed: () {
-                      final textController = TextEditingController();
-                      Get.dialog(
-                        AlertDialog(
-                          title: const Text('Create New Bucket'),
-                          content: TextField(
-                            controller: textController,
-                            decoration: const InputDecoration(
-                              labelText: 'Bucket Name',
-                              hintText: 'Enter bucket name',
-                            ),
-                            autofocus: true,
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Get.back(),
-                              child: const Text('Cancel'),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                if (textController.text.isNotEmpty) {
-                                  controller.createNewBucket(textController.text);
-                                  Get.back();
-                                }
-                              },
-                              child: const Text('Create'),
-                            ),
-                          ],
-                        ),
-                      );
+                      controller.createNewBucket();
                     },
                     icon: const Icon(Icons.add),
                     label: const Text('Create Bucket'),
@@ -105,10 +73,12 @@ class BucketManagementView extends GetView<HomeController> {
                 itemCount: controller.buckets.length,
                 itemBuilder: (context, index) {
                   final bucket = controller.buckets[index];
-                  final isCurrentBucket = bucket == controller.currentBucket.value;
-                  
+                  final isCurrentBucket =
+                      bucket == controller.currentBucket.value;
+
                   return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: ListTile(
                       leading: Icon(
                         Icons.folder,
@@ -118,12 +88,35 @@ class BucketManagementView extends GetView<HomeController> {
                         bucket,
                         style: TextStyle(
                           fontWeight: isCurrentBucket ? FontWeight.bold : null,
-                          color: isCurrentBucket ? Get.theme.primaryColor : null,
+                          color:
+                              isCurrentBucket ? Get.theme.primaryColor : null,
                         ),
                       ),
-                      subtitle: isCurrentBucket
-                          ? const Text('Current Bucket')
-                          : null,
+                      subtitle: Obx(() {
+                        final isPublic = controller.bucketPublicStatus[bucket] ?? false;
+                        return Row(
+                          children: [
+                            if (isCurrentBucket) const Text('Current Bucket'),
+                            if (isCurrentBucket && isPublic) const Text(' • '),
+                            if (isPublic)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.public,
+                                    size: 16,
+                                    color: Colors.green,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'Public Access Enabled',
+                                    style: TextStyle(color: Colors.green),
+                                  ),
+                                ],
+                              ),
+                          ],
+                        );
+                      }),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -134,7 +127,8 @@ class BucketManagementView extends GetView<HomeController> {
                               tooltip: 'Switch to this bucket',
                             ),
                           Obx(() {
-                            final isPublic = controller.bucketPublicStatus[bucket] ?? false;
+                            final isPublic =
+                                controller.bucketPublicStatus[bucket] ?? false;
                             return IconButton(
                               icon: Icon(
                                 Icons.public,
@@ -143,14 +137,14 @@ class BucketManagementView extends GetView<HomeController> {
                               onPressed: () {
                                 Get.dialog(
                                   AlertDialog(
-                                    title: Text(isPublic ? 'Disable Public Access' : 'Enable Public Access'),
-                                    content: Text(
-                                      isPublic
-                                          ? 'This will prevent public access to files in bucket "$bucket". '
-                                              'Are you sure you want to disable public access?'
-                                          : 'This will allow anyone with the URL to access files in bucket "$bucket". '
-                                              'Are you sure you want to enable public access?'
-                                    ),
+                                    title: Text(isPublic
+                                        ? 'Disable Public Access'
+                                        : 'Enable Public Access'),
+                                    content: Text(isPublic
+                                        ? 'This will prevent public access to files in bucket "$bucket". '
+                                            'Are you sure you want to disable public access?'
+                                        : 'This will allow anyone with the URL to access files in bucket "$bucket". '
+                                            'Are you sure you want to enable public access?'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Get.back(),
@@ -159,22 +153,29 @@ class BucketManagementView extends GetView<HomeController> {
                                       ElevatedButton(
                                         onPressed: () {
                                           if (isPublic) {
-                                            controller.disablePublicAccess(bucket);
+                                            controller
+                                                .disablePublicAccess(bucket);
                                           } else {
-                                            controller.enablePublicAccess(bucket);
+                                            controller
+                                                .enablePublicAccess(bucket);
                                           }
                                           Get.back();
                                         },
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: isPublic ? Colors.red : null,
+                                          backgroundColor:
+                                              isPublic ? Colors.red : null,
                                         ),
-                                        child: Text(isPublic ? 'Disable Public Access' : 'Enable Public Access'),
+                                        child: Text(isPublic
+                                            ? 'Disable Public Access'
+                                            : 'Enable Public Access'),
                                       ),
                                     ],
                                   ),
                                 );
                               },
-                              tooltip: isPublic ? 'Public access enabled - Click to disable' : 'Public access disabled - Click to enable',
+                              tooltip: isPublic
+                                  ? 'Public access enabled - Click to disable'
+                                  : 'Public access disabled - Click to enable',
                             );
                           }),
                           if (!isCurrentBucket)
@@ -184,7 +185,8 @@ class BucketManagementView extends GetView<HomeController> {
                                 Get.dialog(
                                   AlertDialog(
                                     title: const Text('Delete Bucket'),
-                                    content: Text('Are you sure you want to delete bucket "$bucket"?'),
+                                    content: Text(
+                                        'Are you sure you want to delete bucket "$bucket"?'),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Get.back(),
@@ -218,4 +220,4 @@ class BucketManagementView extends GetView<HomeController> {
       }),
     );
   }
-} 
+}

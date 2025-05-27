@@ -79,12 +79,33 @@ class HomeView extends GetView<HomeController> {
                 title: Text(fileName),
                 subtitle: Obx(() {
                   final hasError = controller.errorMessage.value.contains(fileName);
-                  return hasError
-                      ? const Text(
+                  final isPublic = controller.bucketPublicStatus[controller.currentBucket.value] ?? false;
+                  return Row(
+                    children: [
+                      if (hasError)
+                        const Text(
                           'Error processing file',
                           style: TextStyle(color: Colors.red),
-                        )
-                      : const SizedBox.shrink();
+                        ),
+                      if (isPublic)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (hasError) const SizedBox(width: 8),
+                            Icon(
+                              Icons.public,
+                              size: 16,
+                              color: Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            const Text(
+                              'Public Access',
+                              style: TextStyle(color: Colors.green),
+                            ),
+                          ],
+                        ),
+                    ],
+                  );
                 }),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
